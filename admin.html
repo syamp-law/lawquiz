@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quiz Master Admin</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  body {
+    display: block;
+    padding: 30px 16px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  .panel {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 160px; }
+  .btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    transition: background .2s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: #667eea; color: #fff; }
+  .btn-primary:hover { background: #5568d3; }
+  .btn-danger  { background: #e53935; color: #fff; }
+  .btn-danger:hover { background: #c62828; }
+  .btn-ghost   { background: #eee; color: #333; }
+  .btn-ghost:hover { background: #ddd; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #eef0ff;
+    color: #4a5bd4;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tabs button.active { background: #667eea; color: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; }
+  th {
+    background: #f6f7ff;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #555;
+    letter-spacing: .5px;
+  }
+  tbody tr:hover { background: #fafbff; }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #e3f7e7;
+    color: #1b7a2a;
+  }
+  .pill.bad { background: #ffe6e6; color: #b71c1c; }
+  .qform label {
+    display: block;
+    margin: 10px 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+  }
+  .qform input, .qform select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .qform input:focus, .qform select:focus { border-color: #667eea; }
+  .small { font-size: 12px; color: #888; }
+  .hidden { display: none; }
+  .error { color: #e53935; margin-top: 10px; font-size: 13px; }
+  .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
+  .detail-cell {
+    background: #fafbff;
+    padding: 12px 16px;
+  }
+  .detail-cell .pill { margin: 2px 4px 2px 0; }
+  h1 { font-size: 22px; }
+  h3 { font-size: 16px; margin-bottom: 12px; }
+  #editingBadge {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ LOGIN ============ -->
+  <div class="panel" id="loginPanel">
+    <h1>🔐 Quiz Master Login</h1>
+    <p class="small" style="margin-bottom:16px">Enter your admin password to continue</p>
+    <div class="row">
+      <input id="pwd" type="password" placeholder="Admin password"
+             onkeydown="if(event.key==='Enter') login()"/>
+      <button class="btn btn-primary" onclick="login()">Unlock</button>
+    </div>
+    <p class="error" id="loginErr"></p>
+  </div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="hidden" id="mainPanel">
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h1>🎛️ Quiz Master Panel</h1>
+        <button class="btn btn-ghost" onclick="logout()">Logout</button>
+      </div>
+
+      <div class="tabs" style="margin-top:16px">
+        <button data-tab="questions"    class="active" onclick="switchTab('questions')">📝 Questions</button>
+        <button data-tab="leaderboard"  onclick="switchTab('leaderboard')">🏆 Leaderboard</button>
+        <button data-tab="participants" onclick="switchTab('participants')">👥 Participants</button>
+      </div>
+    </div>
+
+    <!-- ============ QUESTIONS TAB ============ -->
+    <div id="tab-questions">
+      <div class="panel" style="box-shadow:none;border:1.5px solid #eef0ff;background:#fbfbff">
+        <h3 id="formTitle">➕ Add Question <span id="editingBadge" class="hidden">Editing</span></h3>
+        <div class="qform">
+          <label>Question</label>
+          <input id="qText" placeholder="Enter question text"/>
+          <div class="row">
+            <div><label>Option A</label><input id="optA"/></div>
+            <div><label>Option B</label><input id="optB"/></div>
+          </div>
+          <div class="row">
+            <div><label>Option C</label><input id="optC"/></div>
+            <div><label>Option D</label><input id="optD"/></div>
+          </div>
+          <label>Correct Answer</label>
+          <select id="correct">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveQuestion()">💾 Save</button>
+            <button class="btn btn-ghost" onclick="resetForm()">Cancel</button>
+            <button class="btn btn-ghost" onclick="refreshQuestions()">🔄 Refresh list</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Current Questions (<span id="qCount">0</span>)</h3>
+        <table id="questionsTable">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th>Question</th>
+              <th style="width:80px">Correct</th>
+              <th style="width:150px"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty hidden" id="qEmpty">No questions yet. Add one above.</p>
+      </div>
+    </div>
+
+    <!-- ============ LEADERBOARD TAB ============ -->
+    <div id="tab-leaderboard" class="hidden">
+      <div class="panel">
+        <h3>🏆 Leaderboard</h3>
+        <table id="leaderboardTable">
+          <thead>
+            <tr>
+              <th style="width:60px">Rank</th>
+              <th>Name</th>
+              <th>Place</th>
+              <th>Mobile</th>
+              <th style="width:90px">Score</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty hidden" id="lbEmpty">No participants yet.</p>
+      </div>
+    </div>
+
+    <!-- ============ PARTICIPANTS TAB ============ -->
+    <div id="tab-participants" class="hidden">
+      <div class="panel">
+        <h3>👥 Participants <span class="small">(newest first — click a row for details)</span></h3>
+        <table id="participantsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Mobile</th>
+              <th>Place</th>
+              <th style="width:90px">Score</th>
+              <th>Submitted</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty hidden" id="pEmpty">No submissions yet.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbw-MBciD5Q4O69dJ_Od21RfRP19FK9wRxrxfvzkBCLIOrPdxz7-ks56wdja8e0w-tc9/exec';
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let PASSWORD        = '';
+let cachedQuestions = [];
+let editingRow      = null; // row index in the sheet
+
+/* ============================================================
+   API HELPER
+   ============================================================ */
+async function api(action, extra = {}) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action, password: PASSWORD, ...extra })
+    });
+    return await res.json();
+  } catch (err) {
+    return { error: err.toString() };
+  }
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+async function login() {
+  const pwd = document.getElementById('pwd').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if (!pwd) { errEl.textContent = 'Please enter the password.'; return; }
+
+  PASSWORD = pwd;
+  const res = await api('adminList');
+  if (res.error) {
+    errEl.textContent = 'Invalid password. Try again.';
+    PASSWORD = '';
+    return;
+  }
+
+  sessionStorage.setItem('adminPwd', PASSWORD);
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('mainPanel').classList.remove('hidden');
+  cachedQuestions = res.questions;
+  renderQuestions();
+}
+
+function logout() {
+  sessionStorage.removeItem('adminPwd');
+  location.reload();
+}
+
+/* Auto-resume session */
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('adminPwd');
+  if (saved) {
+    document.getElementById('pwd').value = saved;
+    login();
+  }
+});
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function switchTab(tab) {
+  ['questions','leaderboard','participants'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+    document.querySelector(`.tabs button[data-tab="${t}"]`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'leaderboard')  loadLeaderboard();
+  if (tab === 'participants') loadParticipants();
+}
+
+/* ============================================================
+   QUESTIONS TAB
+   ============================================================ */
+function renderQuestions() {
+  const tbody = document.querySelector('#questionsTable tbody');
+  tbody.innerHTML = '';
+  document.getElementById('qCount').textContent = cachedQuestions.length;
+
+  if (cachedQuestions.length === 0) {
+    document.getElementById('qEmpty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('qEmpty').classList.add('hidden');
+
+  cachedQuestions.forEach((q, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${escapeHTML(q.question)}</td>
+      <td><span class="pill">${q.correctLetter}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost" onclick="editQuestion(${i})">Edit</button>
+        <button class="btn btn-danger" onclick="deleteQuestion(${i})">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function resetForm() {
+  editingRow = null;
+  ['qText','optA','optB','optC','optD'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('correct').value = 'A';
+  document.getElementById('formTitle').innerHTML =
+    '➕ Add Question <span id="editingBadge" class="hidden">Editing</span>';
+}
+
+function editQuestion(i) {
+  const q = cachedQuestions[i];
+  editingRow = q.rowIndex;
+  document.getElementById('qText').value = q.question;
+  document.getElementById('optA').value  = q.options[0];
+  document.getElementById('optB').value  = q.options[1];
+  document.getElementById('optC').value  = q.options[2];
+  document.getElementById('optD').value  = q.options[3];
+  document.getElementById('correct').value = q.correctLetter;
+  document.getElementById('formTitle').innerHTML =
+    `✏️ Edit Question <span id="editingBadge">Row ${q.rowIndex}</span>`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function saveQuestion() {
+  const payload = {
+    question: document.getElementById('qText').value.trim(),
+    options: ['optA','optB','optC','optD'].map(id =>
+      document.getElementById(id).value.trim()),
+    correctLetter: document.getElementById('correct').value
+  };
+
+  if (!payload.question) { alert('Question text is required.'); return; }
+  if (payload.options.some(o => !o)) { alert('All 4 options are required.'); return; }
+
+  let res;
+  if (editingRow) {
+    payload.rowIndex = editingRow;
+    res = await api('adminUpdate', { payload });
+  } else {
+    res = await api('adminAdd', { payload });
+  }
+
+  if (res.error) { alert('Error: ' + res.error); return; }
+  await refreshQuestions();
+  resetForm();
+}
+
+async function deleteQuestion(i) {
+  const q = cachedQuestions[i];
+  if (!confirm(`Delete this question?\n\n"${q.question}"`)) return;
+  const res = await api('adminDelete', { payload: { rowIndex: q.rowIndex } });
+  if (res.error) { alert('Error: ' + res.error); return; }
+  await refreshQuestions();
+}
+
+async function refreshQuestions() {
+  const res = await api('adminList');
+  if (res.error) { alert('Error: ' + res.error); return; }
+  cachedQuestions = res.questions;
+  renderQuestions();
+}
+
+/* ============================================================
+   LEADERBOARD TAB
+   ============================================================ */
+async function loadLeaderboard() {
+  const tbody = document.querySelector('#leaderboardTable tbody');
+  tbody.innerHTML = '';
+  const res = await api('leaderboard', { secret: PASSWORD });
+
+  if (res.error || !res.leaderboard || res.leaderboard.length === 0) {
+    document.getElementById('lbEmpty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('lbEmpty').classList.add('hidden');
+
+  res.leaderboard.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${i + 1}</strong></td>
+      <td>${escapeHTML(r.name)}</td>
+      <td>${escapeHTML(r.place)}</td>
+      <td>${escapeHTML(r.mobile)}</td>
+      <td><span class="pill">${r.score}</span></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   PARTICIPANTS TAB
+   ============================================================ */
+async function loadParticipants() {
+  const tbody = document.querySelector('#participantsTable tbody');
+  tbody.innerHTML = '';
+  const res = await api('adminParticipants');
+
+  if (res.error || !res.participants || res.participants.length === 0) {
+    document.getElementById('pEmpty').classList.remove('hidden');
+    if (res.error) {
+      document.getElementById('pEmpty').textContent = res.error;
+    }
+    return;
+  }
+  document.getElementById('pEmpty').classList.add('hidden');
+
+  res.participants.forEach(p => {
+    const when = p.submittedAt
+      ? new Date(p.submittedAt).toLocaleString()
+      : '—';
+
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.innerHTML = `
+      <td>${escapeHTML(p.name)}</td>
+      <td>${escapeHTML(p.mobile)}</td>
+      <td>${escapeHTML(p.place)}</td>
+      <td><span class="pill ${p.score === 0 ? 'bad' : ''}">${p.score}</span></td>
+      <td class="small">${when}</td>`;
+
+    /* Expandable detail row */
+    const detailTr = document.createElement('tr');
+    detailTr.style.display = 'none';
+    const pills = (p.answers || []).map(a =>
+      `<span class="pill ${a.isCorrect ? '' : 'bad'}">Q${a.q}: ${a.isCorrect ? '✔' : '✘'}</span>`
+    ).join(' ');
+    detailTr.innerHTML =
+      `<td colspan="5" class="detail-cell">${pills || 'No answers recorded.'}</td>`;
+
+    tr.onclick = () => {
+      detailTr.style.display =
+        detailTr.style.display === 'none' ? 'table-row' : 'none';
+    };
+
+    tbody.appendChild(tr);
+    tbody.appendChild(detailTr);
+  });
+}
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>
