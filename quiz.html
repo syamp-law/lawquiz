@@ -8,17 +8,24 @@
 </head>
 <body>
 
-<!-- ===== QUIZ CARD ===== -->
 <div class="card" id="quizCard">
+  <!-- PROGRESS BAR -->
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
   <div class="topbar">
-    <span id="progress">Q 1/1</span>
+    <span id="progressText">Q 1/1</span>
     <span class="timer" id="timer">55s</span>
   </div>
+  
   <h2 id="questionText">Loading…</h2>
   <div id="options" class="options"></div>
+  
+  <!-- NEXT BUTTON (Hidden by default) -->
+  <button id="nextBtn" class="btn-primary" style="display:none; width:100%; margin-top:20px; padding:14px;" onclick="nextQuestion()">Next Question →</button>
 </div>
 
-<!-- ===== RESULT CARD ===== -->
 <div class="card hidden" id="resultCard">
   <h1>✅ Quiz Complete</h1>
   <p class="big" id="scoreLine"></p>
@@ -27,133 +34,106 @@
 </div>
 
 <script>
-/* ============================================================
-   CONFIG
-   ============================================================ */
-const API_URL    = 'https://script.google.com/macros/s/AKfycbw-MBciD5Q4O69dJ_Od21RfRP19FK9wRxrxfvzkBCLIOrPdxz7-ks56wdja8e0w-tc9/exec';
-const TIME_PER_Q = 55; // seconds per question
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+const TIME_PER_Q = 55;
 
-/* ============================================================
-   STATE
-   ============================================================ */
-let questions   = [];
-let current     = 0;
-let answers     = [];
-let timerId     = null;
-let timeLeft    = TIME_PER_Q;
-let locked      = false; // prevents double-clicks / double-advance
+let questions = [];
+let current = 0;
+let answers = [];
+let timerId = null;
+let timeLeft = TIME_PER_Q;
+let answered = false;
 
 const participant = JSON.parse(sessionStorage.getItem('participant') || '{}');
-if (!participant.name) {
-  window.location.href = 'index.html';
-}
+if (!participant.name) window.location.href = 'index.html';
 
-/* ============================================================
-   LOAD QUESTIONS FROM BACKEND
-   ============================================================ */
 async function loadQuestions() {
   try {
-    const res  = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getQuestions' })
-    });
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'getQuestions' }) });
     const data = await res.json();
-
     if (data.error) throw new Error(data.error);
     if (!data.questions || data.questions.length === 0) {
-      document.getElementById('questionText').textContent =
-        'No questions configured. Please contact the quiz master.';
+      document.getElementById('questionText').textContent = 'No questions configured.';
       return;
     }
-
     questions = data.questions;
-    answers   = new Array(questions.length).fill(null);
+    answers = new Array(questions.length).fill(null);
     renderQuestion();
     startTimer();
   } catch (err) {
-    document.getElementById('questionText').textContent =
-      'Failed to load quiz: ' + err.message;
+    document.getElementById('questionText').textContent = 'Failed to load: ' + err.message;
   }
 }
 
-/* ============================================================
-   RENDER CURRENT QUESTION
-   ============================================================ */
 function renderQuestion() {
-  locked = false;
+  answered = false;
   const q = questions[current];
-
-  document.getElementById('progress').textContent =
-    `Q ${current + 1}/${questions.length}`;
+  
+  // Update Progress Bar & Text
+  document.getElementById('progressText').textContent = `Q ${current + 1}/${questions.length}`;
+  document.getElementById('progressBar').style.width = `${((current + 1) / questions.length) * 100}%`;
+  
   document.getElementById('questionText').textContent = q.question;
-
+  document.getElementById('nextBtn').style.display = 'none'; // Hide button
+  
   const box = document.getElementById('options');
   box.innerHTML = '';
   q.options.forEach((opt, i) => {
     const btn = document.createElement('button');
-    btn.className   = 'option';
+    btn.className = 'option';
     btn.textContent = opt;
-    btn.onclick     = () => pickAnswer(i);
+    btn.onclick = () => pickAnswer(i);
     box.appendChild(btn);
   });
 }
 
-/* ============================================================
-   ANSWER PICK
-   ============================================================ */
 function pickAnswer(i) {
-  if (locked) return;
-  locked = true;
-
+  if (answered) return;
+  answered = true;
+  
   answers[current] = i;
-  stopTimer();
-
+  clearInterval(timerId); // Stop timer
+  
   document.querySelectorAll('.option').forEach((b, idx) => {
     b.disabled = true;
     if (idx === i) b.classList.add('selected');
   });
-
-  setTimeout(nextQuestion, 350);
+  
+  // Show Next button
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.style.display = 'block';
+  if (current === questions.length - 1) {
+    nextBtn.textContent = 'Submit Quiz ✅';
+  } else {
+    nextBtn.textContent = 'Next Question →';
+  }
 }
 
-/* ============================================================
-   TIMER
-   ============================================================ */
 function startTimer() {
   timeLeft = TIME_PER_Q;
-  updateTimer();
-
+  document.getElementById('timer').textContent = timeLeft + 's';
+  document.getElementById('timer').classList.remove('danger');
+  
   timerId = setInterval(() => {
     timeLeft--;
-    updateTimer();
+    document.getElementById('timer').textContent = timeLeft + 's';
+    if (timeLeft <= 10) document.getElementById('timer').classList.add('danger');
+    
     if (timeLeft <= 0) {
-      stopTimer();
-      if (!locked) {
-        locked = true;
-        answers[current] = null; // unanswered = wrong
-        // visually mark correct option briefly, then move on
-        setTimeout(nextQuestion, 400);
+      clearInterval(timerId);
+      if (!answered) {
+        answered = true;
+        answers[current] = null; 
+        // Auto show next button if time expires
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = (current === questions.length - 1) ? 'Submit Quiz ✅' : 'Time up! Next →';
+        document.querySelectorAll('.option').forEach(b => b.disabled = true);
       }
     }
   }, 1000);
 }
 
-function stopTimer() {
-  if (timerId !== null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-}
-
-function updateTimer() {
-  const el = document.getElementById('timer');
-  el.textContent = Math.max(timeLeft, 0) + 's';
-  el.classList.toggle('danger', timeLeft <= 10);
-}
-
-/* ============================================================
-   NEXT QUESTION OR SUBMIT
-   ============================================================ */
 function nextQuestion() {
   current++;
   if (current < questions.length) {
@@ -164,20 +144,16 @@ function nextQuestion() {
   }
 }
 
-/* ============================================================
-   SUBMIT TO BACKEND
-   ============================================================ */
 async function submitQuiz() {
   document.getElementById('quizCard').classList.add('hidden');
-
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
       body: JSON.stringify({
         action: 'submit',
-        name:   participant.name,
+        name: participant.name,
         mobile: participant.mobile,
-        place:  participant.place,
+        place: participant.place,
         answers: answers
       })
     });
@@ -187,73 +163,40 @@ async function submitQuiz() {
   } catch (err) {
     document.getElementById('resultCard').classList.remove('hidden');
     document.getElementById('scoreLine').textContent = 'Submission failed';
-    document.getElementById('review').innerHTML =
-      `<p style="color:#e53935">${err.message}</p>`;
   }
 }
 
-/* ============================================================
-   SHOW RESULT + HIGHLIGHT CORRECT ANSWERS
-   ============================================================ */
 function showResult(result) {
   document.getElementById('resultCard').classList.remove('hidden');
-  document.getElementById('scoreLine').textContent =
-    `${result.score} / ${result.total}`;
+  document.getElementById('scoreLine').textContent = `${result.score} / ${result.total}`;
   document.getElementById('who').textContent = participant.name;
 
   const review = document.getElementById('review');
   review.innerHTML = '<h3>Answer Review</h3>';
 
   questions.forEach((q, i) => {
-    const correctIdx  = result.correctAnswers[i];
+    const correctIdx = result.correctAnswers[i];
     const selectedIdx = answers[i];
-
     const block = document.createElement('div');
     block.className = 'review-block';
-    block.innerHTML = `<p class="rq">${i + 1}. ${escapeHTML(q.question)}</p>`;
+    block.innerHTML = `<p class="rq">${i + 1}. ${q.question}</p>`;
 
     q.options.forEach((opt, j) => {
       const line = document.createElement('div');
       line.className = 'ropt';
       if (j === correctIdx) line.classList.add('correct');
       if (j === selectedIdx && selectedIdx !== correctIdx) line.classList.add('wrong');
-
+      
       let suffix = '';
       if (j === correctIdx) suffix = '  ✔';
       else if (j === selectedIdx) suffix = '  ✘';
-
+      
       line.textContent = opt + suffix;
       block.appendChild(line);
     });
-
-    // Show "not answered" note
-    if (selectedIdx === null || selectedIdx === undefined) {
-      const note = document.createElement('p');
-      note.className = 'small';
-      note.style.color = '#e53935';
-      note.textContent = '⚠ Not answered (time expired)';
-      block.appendChild(note);
-    }
-
     review.appendChild(block);
   });
-
-  // Scroll to top so user sees score
-  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
-function escapeHTML(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-
-/* ============================================================
-   KICK OFF
-   ============================================================ */
 loadQuestions();
 </script>
 </body>
