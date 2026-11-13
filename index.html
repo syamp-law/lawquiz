@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quiz Login</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="card" id="loginCard">
+  <h1>🧠 Quiz Login</h1>
+  <p class="sub">Enter your details to begin</p>
+
+  <label>Name</label>
+  <input id="name" type="text" placeholder="Your full name" />
+
+  <label>Mobile</label>
+  <input id="mobile" type="tel" placeholder="10-digit mobile" maxlength="10" />
+
+  <label>Place</label>
+  <input id="place" type="text" placeholder="Your city / place" />
+
+  <p class="error" id="err"></p>
+  <button onclick="startQuiz()">Start Quiz →</button>
+  <p class="note">⏱ 55 seconds per question · No going back</p>
+</div>
+
+<script>
+  function startQuiz() {
+    const name   = document.getElementById('name').value.trim();
+    const mobile = document.getElementById('mobile').value.trim();
+    const place  = document.getElementById('place').value.trim();
+    const err    = document.getElementById('err');
+
+    if (!name || !mobile || !place) { err.textContent = 'Please fill all fields.'; return; }
+    if (!/^\d{10}$/.test(mobile))   { err.textContent = 'Mobile must be 10 digits.'; return; }
+
+    sessionStorage.setItem('participant', JSON.stringify({ name, mobile, place }));
+    window.location.href = 'quiz.html';
+  }
+</script>
+</body>
+</html>
