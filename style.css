@@ -16,21 +16,3 @@
   width: 0%;
   transition: width 0.3s ease;
 }
-
-/* Next Button (Override the login form style) */
-#nextBtn {
-  width: 100%;
-  margin-top: 22px;
-  padding: 14px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .2s, transform .1s;
-}
-
-#nextBtn:hover { background: #5568d3; }
-#nextBtn:active { transform: scale(0.98); }
