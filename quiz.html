@@ -69,12 +69,11 @@ function renderQuestion() {
   answered = false;
   const q = questions[current];
   
-  // Update Progress Bar & Text
   document.getElementById('progressText').textContent = `Q ${current + 1}/${questions.length}`;
   document.getElementById('progressBar').style.width = `${((current + 1) / questions.length) * 100}%`;
   
   document.getElementById('questionText').textContent = q.question;
-  document.getElementById('nextBtn').style.display = 'none'; // Hide button
+  document.getElementById('nextBtn').style.display = 'none';
   
   const box = document.getElementById('options');
   box.innerHTML = '';
@@ -92,21 +91,16 @@ function pickAnswer(i) {
   answered = true;
   
   answers[current] = i;
-  clearInterval(timerId); // Stop timer
+  clearInterval(timerId);
   
   document.querySelectorAll('.option').forEach((b, idx) => {
     b.disabled = true;
     if (idx === i) b.classList.add('selected');
   });
   
-  // Show Next button
   const nextBtn = document.getElementById('nextBtn');
   nextBtn.style.display = 'block';
-  if (current === questions.length - 1) {
-    nextBtn.textContent = 'Submit Quiz ✅';
-  } else {
-    nextBtn.textContent = 'Next Question →';
-  }
+  nextBtn.textContent = (current === questions.length - 1) ? 'Submit Quiz ✅' : 'Next Question →';
 }
 
 function startTimer() {
@@ -124,7 +118,6 @@ function startTimer() {
       if (!answered) {
         answered = true;
         answers[current] = null; 
-        // Auto show next button if time expires
         const nextBtn = document.getElementById('nextBtn');
         nextBtn.style.display = 'block';
         nextBtn.textContent = (current === questions.length - 1) ? 'Submit Quiz ✅' : 'Time up! Next →';
@@ -144,8 +137,24 @@ function nextQuestion() {
   }
 }
 
+/* ============================================================
+   UPDATED SUBMIT LOGIC WITH LOADING MESSAGE
+   ============================================================ */
 async function submitQuiz() {
   document.getElementById('quizCard').classList.add('hidden');
+  document.getElementById('resultCard').classList.remove('hidden');
+  
+  // Show loading state
+  document.getElementById('scoreLine').textContent = 'Submitting...';
+  document.getElementById('who').textContent = participant.name;
+  
+  const review = document.getElementById('review');
+  review.innerHTML = `
+    <div style="text-align:center; padding: 40px 0;">
+      <div class="spinner"></div>
+      <p style="color:#666; margin-top:16px; font-weight:500;">Calculating your score and generating review...</p>
+    </div>`;
+
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -159,18 +168,19 @@ async function submitQuiz() {
     });
     const result = await res.json();
     if (result.error) throw new Error(result.error);
+    
+    // Now render the actual result
     showResult(result);
   } catch (err) {
-    document.getElementById('resultCard').classList.remove('hidden');
-    document.getElementById('scoreLine').textContent = 'Submission failed';
+    document.getElementById('scoreLine').textContent = 'Error';
+    review.innerHTML = `<p style="color:#e53935; text-align:center;">Submission failed: ${err.message}</p>`;
   }
 }
 
 function showResult(result) {
-  document.getElementById('resultCard').classList.remove('hidden');
+  // Update the score and clear the loading spinner
   document.getElementById('scoreLine').textContent = `${result.score} / ${result.total}`;
-  document.getElementById('who').textContent = participant.name;
-
+  
   const review = document.getElementById('review');
   review.innerHTML = '<h3>Answer Review</h3>';
 
@@ -196,7 +206,10 @@ function showResult(result) {
     });
     review.appendChild(block);
   });
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
 loadQuestions();
 </script>
 </body>
